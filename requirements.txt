@@ -3,4 +3,4 @@ Werkzeug==2.0.3
 python-docx==0.8.11
 pandas==1.5.3
 docxtpl==0.16.7
-gunicorn
+gunicorn==20.1.0
