@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Document Generator</h1>
+        <div class="upload-container">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="file-input-container">
+                    <input type="file" id="csvFile" accept=".csv" required>
+                    <label for="csvFile" class="file-label">Choose CSV File</label>
+                </div>
+                <button type="submit" class="submit-btn">Generate Documents</button>
+            </form>
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const status = document.getElementById('status');
+            const formData = new FormData();
+            const fileInput = document.getElementById('csvFile');
+            
+            if (fileInput.files.length === 0) {
+                status.textContent = 'Please select a file';
+                return;
+            }
+
+            formData.append('file', fileInput.files[0]);
+            status.textContent = 'Processing...';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'generated_documents.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    status.textContent = 'Documents generated successfully!';
+                } else {
+                    const error = await response.json();
+                    status.textContent = `Error: ${error.error}`;
+                }
+            } catch (error) {
+                status.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

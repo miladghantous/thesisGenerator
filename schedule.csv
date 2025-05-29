@@ -1,0 +1,31 @@
+Student_ID,Student_Name,Thesis_Title,Supervisor_Name,Reviewer_Name,Review_Date
+55-11425,Ahmed Mohamed Hassan Mohamed Elgohary,AI-powered COSMIC Functional size measurement (FSM),Milad Michel Ghantous,Wagdy Anis Aziz,Sunday 15th of June 2025
+55-2962,Mostafa Hisham Mohamed Rafik Khaled Hamdy,Building a digital twin for priority based constrained vehicle routing in intelligent transportation systems,Milad Michel Ghantous,Hussein Abdelaty ElSayed Mohamed,Monday 16th of June 2025
+55-5288,Ali Khaled Ali Abdelaal Shaheen,Building Explainable AI Models for healthcare: enhancing transparency in medical reports- Microsoft -Dr.Milad Ghantous,Milad Michel Ghantous,Islam Ahmed Mahmoud Ahmed ElMAddah,Monday 23rd of June 2025
+55-17419,Donia Mourad Mohamed Fathey,EBias in medical AI Models: identifying and miligating disparities across diverse demographics-Microsoft-Dr.Milad Ghantous,Milad Michel Ghantous,Islam Ahmed Mahmoud Ahmed ElMAddah,Monday 23rd of June 2025
+55-5899,Nour Ahmed Saber Abdelhamid,Emotional impact of AI generated medical reports: Analyzing user reactions to automated health summaries- Microsoft-Dr.Milad Ghantous,Milad Michel Ghantous,Islam Ahmed Mahmoud Ahmed ElMAddah,Monday 23rd of June 2025
+55-23815,Ahmed Kamal Sayed Ahmed Mohamed Elbakly,Enhancing branch prediction in microprocessors with deep learning ,Milad Michel Ghantous,Cherif Salama,Monday 23rd of June 2025
+55-0593,Jana Alaa Mohamed Elewainy,Federated Learning and AI Algorithms for Data Protection and Attack Prevention (Co-supervised by Dr. Minar ElAser IET),Milad Michel Ghantous,Mona Farouk,Sunday 15th of June 2025
+55-1117,Zeiad Hossameldin Mohamed Tawfik Amin Elenani,Fine-Tuning Pretrained Vision Transformers for Pedestrian Action Classification,Milad Michel Ghantous,Wagdy Anis Aziz,Sunday 15th of June 2025
+55-11997,Anas Tamer Saeed Osman,High-level-language for automatic generation of  quantum circuits (knowledge in quantum is required),Milad Michel Ghantous,Wagdy Anis Aziz,Sunday 15th of June 2025
+55-24913,Ahmed Hussein Ali Ahmed,Investigating cybersecurity attacks on autonomous vehicles using beamNG and Siemens innexis virtual system I (in collaboration with Siemens and BeamNg),Milad Michel Ghantous,Wagdy Anis Aziz,Saturday 14th of June 2025
+55-23342,Abdullah Mahmoud Mohamed Ismail Ahmed,Investigating cybersecurity attacks on autonomous vehicles using beamNG and Siemens innexis virtual system II (in collaboration with Siemens and BeamNg),Milad Michel Ghantous,Tamer Mostafa Abdelkader,Wednesday 18th of June 2025
+55-3437,Yousef Yasser Mohamed Nabil Mostafa,Investigating safety and sensor errors in autonomous vehicles using beamNG and Siemens innexis virtual system interconnect I (In collaboration with Siemens and BeamNG),Milad Michel Ghantous,Tamer Mostafa Abdelkader,Wednesday 18th of June 2025
+55-26445,Abdelrahman Mohamed Wael Farouk Fouad Khalil,Investigating safety and sensor errors in autonomous vehicles using beamNG and Siemens innexis virtual system interconnect II (In collaboration with Siemens and BeamNG),Milad Michel Ghantous,Tamer Mostafa Abdelkader,Wednesday 18th of June 2025
+55-1256,Mohamed Wael Ahmed Mahmoud Sadek,ML/AI Prediction for FPGA synthesis needs with Quartus tool and VHDL -Siemens -Dr.Milad Ghantous,Milad Michel Ghantous,Ahmed Madian,Sunday 15th of June 2025
+55-25085,Ahmed Gasser Shehata Taha,ML/AI Prediction for FPGA synthesis needs with vivado tool and verilog,Milad Michel Ghantous,Ahmed Madian,Sunday 15th of June 2025
+55-0654,Omar Mostafa Fouad Mohamed Tawfik Elharridy,ML/AI Prediction for FPGA synthesis needs with vivado tool and verilog -Siemens- Dr.Milad Ghantous,Milad Michel Ghantous,Ahmed Madian,Sunday 15th of June 2025
+55-24853,Seif Tarek Mostafa Abdelwahab Elesawy,ML/AI Prediction for FPGA synthesis needs with vivado tool and VHDL -Siemens-Dr.Milad Ghantous,Milad Michel Ghantous,Ahmed Madian,Sunday 15th of June 2025
+55-5284,Aly Yasser Galaleldin Abdelaziz Serry,Natural Language processing for medical data: extracting insights from unstructed medical reports -Microsoft-Dr.Milad Ghantous,Milad Michel Ghantous,Islam Ahmed Mahmoud Ahmed ElMAddah,Monday 23rd of June 2025
+55-8079,Arwa Hatem Amin Abdalla Ahmed,Online Reconfigurable NN for Real-Time Applications,Milad Michel Ghantous,Mohamed Hesham Farouk El-Sayed,Monday 16th of June 2025
+55-4672,Salma Mahmoud Rashad Mahmoud Elhabash,The use of AI and LLM for functional and non-functional SW specification requirements generation,Milad Michel Ghantous,Wagdy Anis Aziz,Saturday 14th of June 2025
+55-25378,Mohamed Khaled Naguib Mohamed Abdelazeem,Use of AI in rider assistance for Smart autonomous bikes,Milad Michel Ghantous,Diaa Emad Abdel Fattah,Thursday 19th of June 2025
+55-6059,Reem Manassa Anwar Yacoub Youssef,Vehicle Trajectory Prediction for Autonomous Driving Using Contextual Social LSTMs (CS-LSTMs),Milad Michel Ghantous,Mohamed Hesham Farouk El-Sayed,Monday 16th of June 2025
+52-23509,Saher Samy Naguib Askander,Virtual bike lane generation for smart Autonomous bikes,Milad Michel Ghantous,Diaa Emad Abdel Fattah,Thursday 19th of June 2025
+55-1311,Mahmoud Yasser Abdelghany Mohamed Dahroug,Dynamic Spatial-Temporal Graph Attention Networks for Multi-Agent Trajectory Prediction,Milad Michel Ghantous,Mohamed Handoussa,Monday 16th of June 2025
+55-23897,Mohamed Hossameldin Mohamed Abdulbaki,Multi-Agent Vehicle Intention Prediction Using Vision Transformer-Based Social Interaction Modeling,Milad Michel Ghantous,Hewayda Lotfy,Saturday 14th of June 2025
+55-3310,Hana Ibrahim Mostafa Gamaleldin Eldemery,Temporal Pedestrian Behavior Prediction Using LSTM Networks,Milad Michel Ghantous,Tamer Heshmat,Wednesday 18th of June 2025
+55-5351,Nadeem Mohamed Gaber Ali Soliman,Vision Transformer-Based Framework for Vehicle Intention Prediction in Autonomous Driving,Milad Michel Ghantous,Cherry Ahmed,Monday 23rd of June 2025
+55-25376,Yahia Hesham Anwer Abdelraheem,Vision Transformers for Multi-Modal Pedestrian Behavior Prediction,Milad Michel Ghantous,Cherry Ahmed,Monday 23rd of June 2025
+55-1513,Maran Malak Fawzy Malak,Visual path odometry techniques for smart autonomous bikes,Milad Michel Ghantous,Mohamed Handoussa,Monday 16th of June 2025
+55-0842,Abdelrahman Hesham Mohamed Shawky Elsamalouty,Multi-Stream LSTM Framework for Pedestrian Behavior Prediction,Milad Michel Ghantous,Prof. Turker,Monday 23rd of June 2025
