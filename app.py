@@ -6,23 +6,27 @@ import zipfile
 import os
 import logging
 from werkzeug.utils import secure_filename
+from flask_cors import CORS
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)
 
 # Configure maximum file size (5MB)
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
+# Get the absolute path to the directory containing app.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Ensure the required directories exist
-UPLOAD_FOLDER = 'uploads'
-TEMPLATE_FOLDER = os.path.join('templates', 'word_templates')
+TEMPLATE_FOLDER = os.path.join(BASE_DIR, 'templates', 'word_templates')
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 
 for folder in [UPLOAD_FOLDER, TEMPLATE_FOLDER]:
-    if not os.path.exists(folder):
-        os.makedirs(folder)
+    os.makedirs(folder, exist_ok=True)
 
 def validate_csv(file):
     """Validate the uploaded CSV file."""
@@ -34,82 +38,14 @@ def validate_csv(file):
         return False, "File must be a CSV"
     return True, None
 
-def process_templates(df):
-    """Process each row of the dataframe with one template."""  # Changed comment
-    memory_file = io.BytesIO()
-    
-    try:
-        # Debug CSV data
-        print("\n=== CSV DEBUG INFO ===")
-        print("CSV Headers:", df.columns.tolist())
-        print("First row data:", df.iloc[0].to_dict() if len(df) > 0 else "No data")
-        
-        with zipfile.ZipFile(memory_file, 'w') as zf:
-            # Process each row
-            for index, row in df.iterrows():
-                print(f"\n=== Processing Row {index + 1} ===")
-                
-                # Convert row to dict and clean up the data
-                context = row.to_dict()
-                # Convert any non-string values to strings and handle NaN
-                context = {k: str(v) if pd.notnull(v) else '' for k, v in context.items()}
-                print(f"Row data:", context)
-                
-                # REMOVED: for i in range(1, 6):  <- This loop is gone
-                
-                # CHANGED: Now just looks for one template file
-                template_path = os.path.join(TEMPLATE_FOLDER, 'template1.docx')  # Changed from f'template{i}.docx'
-                print("\nChecking template...")  # Changed message
-                
-                if not os.path.exists(template_path):
-                    print(f"ERROR: Template file not found: {template_path}")
-                    raise FileNotFoundError(f"Template not found at {template_path}")
-                
-                try:
-                    print("Loading template...")  # Changed message
-                    doc = DocxTemplate(template_path)
-                    
-                    # Get template variables
-                    variables = doc.get_undeclared_template_variables()
-                    print(f"Template variables:", variables)  # Changed message
-                    
-                    # Check for missing variables
-                    missing_vars = [var for var in variables if var not in context]
-                    if missing_vars:
-                        print(f"WARNING: Missing variables:", missing_vars)  # Changed message
-                        print("Available context keys:", list(context.keys()))
-                    
-                    # Render the document
-                    print("Rendering template...")  # Changed message
-                    doc.render(context)
-                    
-                    # Save to memory
-                    doc_buffer = io.BytesIO()
-                    doc.save(doc_buffer)
-                    doc_buffer.seek(0)
-                    
-                    # CHANGED: Simplified filename
-                    filename = f'document_row_{index+1}.docx'  # Changed from f'row_{index+1}_template_{i}.docx'
-                    zf.writestr(filename, doc_buffer.getvalue())
-                    print(f"Successfully processed document for row {index + 1}")  # Changed message
-                    
-                except Exception as e:
-                    print(f"ERROR processing template for row {index + 1}")  # Changed message
-                    print(f"Error details: {str(e)}")
-                    raise Exception(f"Template processing failed: {str(e)}")  # Changed message
-        
-        memory_file.seek(0)
-        return memory_file
-        
-    except Exception as e:
-        print(f"Process templates failed: {str(e)}")
-        raise
-
-
 @app.route('/')
 def index():
     """Render the upload form."""
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error rendering index: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -130,16 +66,10 @@ def upload_file():
             # Read CSV file
             df = pd.read_csv(file)
             logger.debug(f"CSV Headers: {df.columns.tolist()}")
-            logger.debug(f"Number of rows: {len(df)}")
             
             if df.empty:
                 return jsonify({'error': 'CSV file is empty'}), 400
             
-        except Exception as e:
-            logger.error(f"Error reading CSV: {str(e)}")
-            return jsonify({'error': 'Error reading CSV file. Please ensure it is properly formatted.'}), 400
-        
-        try:
             # Process templates and create ZIP
             memory_file = process_templates(df)
             
@@ -151,12 +81,54 @@ def upload_file():
             )
             
         except Exception as e:
-            logger.error(f"Error processing templates: {str(e)}")
-            return jsonify({'error': 'Error processing templates. Please check template format and CSV data.'}), 500
+            logger.error(f"Error processing file: {str(e)}")
+            return jsonify({'error': str(e)}), 400
             
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+def process_templates(df):
+    """Process each row of the dataframe with one template."""
+    memory_file = io.BytesIO()
+    
+    try:
+        with zipfile.ZipFile(memory_file, 'w') as zf:
+            # Process each row
+            for index, row in df.iterrows():
+                # Convert row to dict and clean up the data
+                context = row.to_dict()
+                # Convert any non-string values to strings and handle NaN
+                context = {k: str(v) if pd.notnull(v) else '' for k, v in context.items()}
+                logger.debug(f"Processing row {index + 1} with context: {context}")
+                
+                template_path = os.path.join(TEMPLATE_FOLDER, 'template1.docx')
+                if not os.path.exists(template_path):
+                    raise FileNotFoundError(f"Template not found at {template_path}")
+                
+                try:
+                    doc = DocxTemplate(template_path)
+                    doc.render(context)
+                    
+                    # Save to memory
+                    doc_buffer = io.BytesIO()
+                    doc.save(doc_buffer)
+                    doc_buffer.seek(0)
+                    
+                    # Add to ZIP
+                    filename = f'document_row_{index+1}.docx'
+                    zf.writestr(filename, doc_buffer.getvalue())
+                    
+                except Exception as e:
+                    logger.error(f"Error processing row {index + 1}: {str(e)}")
+                    raise Exception(f"Error processing row {index + 1}: {str(e)}")
+        
+        memory_file.seek(0)
+        return memory_file
+        
+    except Exception as e:
+        logger.error(f"Process templates failed: {str(e)}")
+        raise
 
 @app.errorhandler(413)
 def too_large(e):
@@ -164,4 +136,5 @@ def too_large(e):
     return jsonify({'error': 'File is too large. Maximum size is 5MB'}), 413
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
