@@ -91,7 +91,7 @@ def upload_file():
 def process_templates(df):
     """Process each row of the dataframe with one template."""
     memory_file = io.BytesIO()
-    
+    filename_column = 'Student_Name'
     try:
         with zipfile.ZipFile(memory_file, 'w') as zf:
             # Process each row
@@ -101,6 +101,11 @@ def process_templates(df):
                 # Convert any non-string values to strings and handle NaN
                 context = {k: str(v) if pd.notnull(v) else '' for k, v in context.items()}
                 logger.debug(f"Processing row {index + 1} with context: {context}")
+                if filename_column not in context:
+                    raise ValueError(f"Column '{filename_column}' not found in CSV headers")
+                
+                # NEW: Get the file identifier from the CSV column
+                file_identifier = context[filename_column]
                 
                 template_path = os.path.join(TEMPLATE_FOLDER, 'template1.docx')
                 if not os.path.exists(template_path):
@@ -116,7 +121,7 @@ def process_templates(df):
                     doc_buffer.seek(0)
                     
                     # Add to ZIP
-                    filename = f'document_row_{index+1}.docx'
+                    filename = f'{file_identifier}.docx'
                     zf.writestr(filename, doc_buffer.getvalue())
                     
                 except Exception as e:
