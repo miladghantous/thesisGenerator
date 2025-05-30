@@ -3,61 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Generator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>GUC Thesis Eval Generator</title>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            animation: fadeIn 0.8s ease-out;
+            flex: 1;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            animation: slideIn 1s ease-out;
+        }
+
+        .file-input {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .file-input input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            animation: fadeIn 1s ease-out 0.5s backwards;
+        }
+
+        .file-label:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            animation: fadeIn 1s ease-out 0.7s backwards;
+        }
+
+        button:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.1em;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .processing {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid #1565c0;
+        }
+
+        .selected-file {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #2c3e50;
+            font-size: 1em;
+            margin-top: auto;
+            animation: fadeIn 1s ease-out 1s backwards;
+        }
+
+        .logo {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Document Generator</h1>
-        <div class="upload-container">
-            <form id="uploadForm" enctype="multipart/form-data">
-                <div class="file-input-container">
-                    <input type="file" id="csvFile" accept=".csv" required>
-                    <label for="csvFile" class="file-label">Choose CSV File</label>
-                </div>
-                <button type="submit" class="submit-btn">Generate Documents</button>
-            </form>
-            <div id="status" class="status"></div>
-        </div>
+        <div class="logo">GUC</div>
+        <h1>Thesis Eval Generator</h1>
+        <form id="uploadForm">
+            <div class="file-input">
+                <input type="file" id="csvFile" accept=".csv" required>
+                <label for="csvFile" class="file-label">Choose CSV File</label>
+                <div class="selected-file" id="selectedFile"></div>
+            </div>
+            <button type="submit" id="submitBtn">Generate Documents</button>
+        </form>
+        <div id="status" class="status" style="display: none;"></div>
     </div>
 
+    <footer>
+        Developed by Dr. Milad Ghantous, MET
+    </footer>
+
     <script>
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        const form = document.getElementById('uploadForm');
+        const status = document.getElementById('status');
+        const submitBtn = document.getElementById('submitBtn');
+        const selectedFile = document.getElementById('selectedFile');
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function setLoading(isLoading) {
+            submitBtn.disabled = isLoading;
+            submitBtn.textContent = isLoading ? 'Processing...' : 'Generate Documents';
+            submitBtn.style.animation = isLoading ? 'pulse 1s infinite' : '';
+        }
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || 'No file chosen';
+            selectedFile.textContent = `Selected: ${fileName}`;
+        });
+
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const status = document.getElementById('status');
-            const formData = new FormData();
             const fileInput = document.getElementById('csvFile');
             
-            if (fileInput.files.length === 0) {
-                status.textContent = 'Please select a file';
+            if (!fileInput.files.length) {
+                showStatus('Please select a CSV file', 'error');
                 return;
             }
 
-            formData.append('file', fileInput.files[0]);
-            status.textContent = 'Processing...';
+            setLoading(true);
+            showStatus('Processing your request...', 'processing');
 
             try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
                 });
 
+                const contentType = response.headers.get('content-type');
+
                 if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'generated_documents.zip';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    status.textContent = 'Documents generated successfully!';
+                    if (contentType && contentType.includes('application/zip')) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'generated_documents.zip';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        showStatus('Documents generated and downloaded successfully!', 'success');
+                    } else {
+                        try {
+                            const text = await response.text();
+                            console.error('Unexpected response type:', contentType);
+                            console.error('Response text:', text);
+                            showStatus('Unexpected server response type', 'error');
+                        } catch (error) {
+                            showStatus('Error processing server response', 'error');
+                        }
+                    }
                 } else {
-                    const error = await response.json();
-                    status.textContent = `Error: ${error.error}`;
+                    try {
+                        const text = await response.text();
+                        let errorMessage = 'An error occurred';
+                        
+                        try {
+                            const errorData = JSON.parse(text);
+                            errorMessage = errorData.error || 'Unknown error occurred';
+                        } catch (jsonError) {
+                            console.error('Error parsing JSON:', text);
+                            errorMessage = `Server error: ${response.status}`;
+                        }
+                        
+                        showStatus(errorMessage, 'error');
+                    } catch (error) {
+                        showStatus('Failed to process server response', 'error');
+                    }
                 }
             } catch (error) {
-                status.textContent = `Error: ${error.message}`;
+                console.error('Request failed:', error);
+                showStatus('Failed to connect to server', 'error');
+            } finally {
+                setLoading(false);
             }
         });
     </script>
