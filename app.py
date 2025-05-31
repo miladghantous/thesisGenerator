@@ -8,14 +8,17 @@ import logging
 import gc
 from werkzeug.utils import secure_filename
 from time import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import uuid
-from collections import deque
 from datetime import datetime, timedelta
+import atexit
+from concurrent.futures import ThreadPoolExecutor
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -23,20 +26,22 @@ app = Flask(__name__)
 # Configure maximum file size (5MB)
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
-# Task queue and results storage
-task_queue = deque()
+# Task storage
 task_results = {}
 RESULT_EXPIRY = timedelta(minutes=30)
+BATCH_SIZE = 5
+MAX_WORKERS = 2
 
 # Ensure the required directories exist
 UPLOAD_FOLDER = 'uploads'
 TEMPLATE_FOLDER = os.path.join('templates', 'word_templates')
-BATCH_SIZE = 5  # Process 5 documents at a time
-MAX_WORKERS = 2  # Limit concurrent processing
 
 for folder in [UPLOAD_FOLDER, TEMPLATE_FOLDER]:
     if not os.path.exists(folder):
         os.makedirs(folder)
+
+# Global thread pool executor
+executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
 
 def validate_excel(file):
     """Validate the uploaded Excel file."""
@@ -90,7 +95,8 @@ def process_single_row(template_path, row_data, index):
         }
 
 def process_templates_background(task_id, df):
-    """Process the dataframe in batches in the background."""
+    """Process the dataframe in batches."""
+    logger.info(f"Starting background processing for task {task_id}")
     try:
         memory_file = io.BytesIO()
         template_path = os.path.join(TEMPLATE_FOLDER, 'template1.docx')
@@ -105,29 +111,24 @@ def process_templates_background(task_id, df):
             # Process in batches
             while processed < total_rows:
                 batch = df.iloc[processed:processed + BATCH_SIZE]
+                batch_size = len(batch)
                 
-                with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                    future_to_row = {
-                        executor.submit(
-                            process_single_row, 
-                            template_path, 
-                            row.to_dict(), 
-                            idx
-                        ): idx 
-                        for idx, row in batch.iterrows()
-                    }
-                    
-                    for future in as_completed(future_to_row):
-                        result = future.result()
+                # Process each row in the batch
+                for idx, row in batch.iterrows():
+                    try:
+                        result = process_single_row(template_path, row.to_dict(), idx)
                         if result['success']:
                             zf.writestr(result['filename'], result['data'])
-                            logger.info(f"Processed document {result['index'] + 1}/{total_rows}")
-                            # Update task progress
-                            task_results[task_id]['progress'] = int((processed + 1) * 100 / total_rows)
+                            processed += 1
+                            # Update progress
+                            progress = int((processed * 100) / total_rows)
+                            logger.info(f"Task {task_id}: Processed {processed}/{total_rows} ({progress}%)")
+                            task_results[task_id]['progress'] = progress
                         else:
-                            logger.error(f"Failed to process row {result['index'] + 1}: {result.get('error')}")
+                            logger.error(f"Failed to process row {idx}: {result.get('error')}")
+                    except Exception as e:
+                        logger.error(f"Error processing row {idx}: {str(e)}")
                 
-                processed += len(batch)
                 gc.collect()
         
         memory_file.seek(0)
@@ -135,37 +136,23 @@ def process_templates_background(task_id, df):
             'status': 'completed',
             'result': memory_file.getvalue(),
             'progress': 100,
-            'timestamp': datetime.now()  # Update timestamp when completed
+            'timestamp': datetime.now()
         })
+        logger.info(f"Task {task_id} completed successfully")
         
     except Exception as e:
-        logger.error(f"Process templates failed: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Task {task_id} failed: {error_msg}")
         task_results[task_id].update({
             'status': 'failed',
-            'error': str(e),
-            'timestamp': datetime.now()  # Update timestamp when failed
+            'error': error_msg,
+            'timestamp': datetime.now()
         })
-
-def process_task_queue():
-    """Background worker to process tasks."""
-    while True:
-        try:
-            if task_queue:
-                task_id = task_queue.popleft()
-                if task_id in task_results:
-                    task = task_results[task_id]
-                    if task['status'] == 'pending':
-                        process_templates_background(task_id, task['data'])
-                        # Clear the dataframe from memory after processing
-                        if 'data' in task_results[task_id]:
-                            del task_results[task_id]['data']
-                            gc.collect()
-            else:
-                clean_old_results()
-                threading.Event().wait(1)  # Sleep for 1 second when queue is empty
-        except Exception as e:
-            logger.error(f"Task queue processing error: {str(e)}")
-            threading.Event().wait(1)
+    finally:
+        # Clean up the dataframe
+        if 'data' in task_results[task_id]:
+            del task_results[task_id]['data']
+            gc.collect()
 
 def clean_old_results():
     """Remove old results to prevent memory leaks"""
@@ -178,12 +165,12 @@ def clean_old_results():
     for task_id in expired_tasks:
         try:
             del task_results[task_id]
+            logger.info(f"Cleaned up expired task {task_id}")
         except KeyError:
-            pass  # Task might have been deleted by another thread
+            pass
 
-# Start background worker
-worker_thread = threading.Thread(target=process_task_queue, daemon=True)
-worker_thread.start()
+# Register cleanup function
+atexit.register(executor.shutdown)
 
 @app.route('/')
 def index():
@@ -216,9 +203,11 @@ def upload_file():
                 'timestamp': datetime.now(),
                 'data': df
             }
-            task_queue.append(task_id)
             
-            logger.info(f"Created task {task_id}")
+            # Start background processing
+            executor.submit(process_templates_background, task_id, df)
+            
+            logger.info(f"Created and started task {task_id}")
             return jsonify({
                 'task_id': task_id,
                 'status': 'processing',
@@ -236,16 +225,20 @@ def upload_file():
 @app.route('/status/<task_id>')
 def get_status(task_id):
     """Get the status of a processing task."""
-    logger.info(f"Checking status for task {task_id}")
+    logger.info(f"Status check for task {task_id}")
     if task_id not in task_results:
         return jsonify({'error': 'Task not found'}), 404
     
     task = task_results[task_id]
-    return jsonify({
+    response = {
         'status': task['status'],
-        'progress': task.get('progress', 0),
-        'error': task.get('error', None)
-    })
+        'progress': task.get('progress', 0)
+    }
+    
+    if task.get('error'):
+        response['error'] = task['error']
+    
+    return jsonify(response)
 
 @app.route('/download/<task_id>')
 def download_result(task_id):
@@ -265,12 +258,17 @@ def download_result(task_id):
         memory_file = io.BytesIO(task['result'])
         memory_file.seek(0)
         
-        return send_file(
+        response = send_file(
             memory_file,
             mimetype='application/zip',
             as_attachment=True,
             download_name='generated_documents.zip'
         )
+        
+        # Clean up after sending
+        clean_old_results()
+        return response
+        
     except Exception as e:
         logger.error(f"Error sending file: {str(e)}")
         return jsonify({'error': 'Error sending file'}), 500
