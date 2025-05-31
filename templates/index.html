@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GUC Thesis Eval Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-20px); }
@@ -143,7 +144,7 @@
             padding: 20px;
             background: rgba(255, 255, 255, 0.9);
             color: #2c3e50;
-            font-size: 0.7em;
+            font-size: 1em;
             margin-top: auto;
             animation: fadeIn 1s ease-out 1s backwards;
         }
@@ -153,7 +154,7 @@
             font-weight: bold;
             color: #2c3e50;
             margin-bottom: 10px;
-            
+            animation: pulse 2s infinite;
         }
 
         @media (max-width: 600px) {
@@ -166,120 +167,175 @@
                 font-size: 2em;
             }
         }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="logo">GUC</div>
-        <h1>Thesis Eval Generator</h1>
-        <form id="uploadForm">
-            <div class="file-input">
-                <input type="file" id="csvFile" accept=".xlsx" required>
-                <label for="csvFile" class="file-label">Choose excel File</label>
-                <div class="selected-file" id="selectedFile"></div>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <img src="{{ url_for('static', filename='guc-logo.png') }}" alt="GUC Logo" class="mx-auto mb-4 w-32">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">GUC Thesis Eval Generator</h1>
             </div>
-            <button type="submit" id="submitBtn">Generate Documents</button>
-        </form>
-        <div id="status" class="status" style="display: none;"></div>
+
+            <!-- Upload Form -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <form id="uploadForm" class="space-y-4">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input type="file" id="file" name="file" accept=".xlsx,.xls" class="hidden">
+                        <label for="file" class="cursor-pointer">
+                            <div class="text-gray-600">
+                                <svg class="mx-auto h-12 w-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <p class="text-lg mb-2">Drop your Excel file here or click to browse</p>
+                                <p class="text-sm text-gray-500">Supported formats: .xlsx, .xls</p>
+                            </div>
+                        </label>
+                        <div id="fileInfo" class="mt-3 text-sm text-gray-600 hidden">
+                            Selected file: <span id="fileName"></span>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
+                        Generate Documents
+                    </button>
+                </form>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progressSection" class="bg-white rounded-lg shadow-md p-6 hidden">
+                <h3 class="text-lg font-semibold mb-4">Processing Documents</h3>
+                <div class="relative pt-1">
+                    <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200">
+                        <div id="progressBar" class="progress-bar shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span id="progressText">0%</span>
+                        <span id="progressStatus">Processing...</span>
+                    </div>
+                </div>
+                <button id="downloadButton" class="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200 hidden">
+                    Download Documents
+                </button>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4 hidden">
+                <span class="block sm:inline"></span>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-8 text-gray-600 text-sm">
+                Created by Dr. Milad Ghantous, MET
+            </div>
+        </div>
     </div>
 
-    <footer>
-        Developed for MET by Dr. Milad Ghantous with the help of Claude AI
-    </footer>
-
     <script>
-        const form = document.getElementById('uploadForm');
-        const status = document.getElementById('status');
-        const submitBtn = document.getElementById('submitBtn');
-        const selectedFile = document.getElementById('selectedFile');
+        let currentTaskId = null;
+        const uploadForm = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('file');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const progressSection = document.getElementById('progressSection');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressStatus = document.getElementById('progressStatus');
+        const downloadButton = document.getElementById('downloadButton');
+        const errorMessage = document.getElementById('errorMessage');
 
-        function showStatus(message, type) {
-            status.textContent = message;
-            status.className = `status ${type}`;
-            status.style.display = 'block';
-        }
-
-        function setLoading(isLoading) {
-            submitBtn.disabled = isLoading;
-            submitBtn.textContent = isLoading ? 'Processing...' : 'Generate Documents';
-            submitBtn.style.animation = isLoading ? 'pulse 1s infinite' : '';
-        }
-
-        document.getElementById('csvFile').addEventListener('change', function(e) {
-            const fileName = e.target.files[0]?.name || 'No file chosen';
-            selectedFile.textContent = `Selected: ${fileName}`;
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                fileInfo.classList.remove('hidden');
+            }
         });
 
-        form.addEventListener('submit', async (e) => {
+        uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const fileInput = document.getElementById('csvFile');
-            
-            if (!fileInput.files.length) {
-                showStatus('Please select an excel file', 'error');
-                return;
-            }
-
-            setLoading(true);
-            showStatus('Processing your request...', 'processing');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
 
             try {
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
+                errorMessage.classList.add('hidden');
+                progressSection.classList.remove('hidden');
+                downloadButton.classList.add('hidden');
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                progressStatus.textContent = 'Processing...';
 
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
                 });
 
-                const contentType = response.headers.get('content-type');
-
-                if (response.ok) {
-                    if (contentType && contentType.includes('application/zip')) {
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'generated_documents.zip';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        window.URL.revokeObjectURL(url);
-                        showStatus('Documents generated and downloaded successfully!', 'success');
-                    } else {
-                        try {
-                            const text = await response.text();
-                            console.error('Unexpected response type:', contentType);
-                            console.error('Response text:', text);
-                            showStatus('Unexpected server response type', 'error');
-                        } catch (error) {
-                            showStatus('Error processing server response', 'error');
-                        }
-                    }
-                } else {
-                    try {
-                        const text = await response.text();
-                        let errorMessage = 'An error occurred';
-                        
-                        try {
-                            const errorData = JSON.parse(text);
-                            errorMessage = errorData.error || 'Unknown error occurred';
-                        } catch (jsonError) {
-                            console.error('Error parsing JSON:', text);
-                            errorMessage = `Server error: ${response.status}`;
-                        }
-                        
-                        showStatus(errorMessage, 'error');
-                    } catch (error) {
-                        showStatus('Failed to process server response', 'error');
-                    }
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Upload failed');
                 }
+
+                currentTaskId = data.task_id;
+                checkStatus();
+
             } catch (error) {
-                console.error('Request failed:', error);
-                showStatus('Failed to connect to server', 'error');
-            } finally {
-                setLoading(false);
+                showError(error.message);
             }
         });
+
+        async function checkStatus() {
+            if (!currentTaskId) return;
+
+            try {
+                const response = await fetch(`/status/${currentTaskId}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Status check failed');
+                }
+
+                progressBar.style.width = `${data.progress}%`;
+                progressText.textContent = `${data.progress}%`;
+
+                if (data.status === 'completed') {
+                    progressStatus.textContent = 'Processing complete!';
+                    downloadButton.classList.remove('hidden');
+                } else if (data.status === 'failed') {
+                    throw new Error('Processing failed');
+                } else {
+                    setTimeout(checkStatus, 1000);
+                }
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        downloadButton.addEventListener('click', () => {
+            if (!currentTaskId) {
+                showError('No active task found. Please try uploading again.');
+                return;
+            }
+            window.location.href = `/download/${currentTaskId}`;
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            progressSection.classList.add('hidden');
+        }
     </script>
 </body>
 </html>
