@@ -174,8 +174,8 @@
         <h1>Thesis Eval Generator</h1>
         <form id="uploadForm">
             <div class="file-input">
-                <input type="file" id="csvFile" accept=".csv" required>
-                <label for="csvFile" class="file-label">Choose CSV File</label>
+                <input type="file" id="csvFile" accept=".xlsx" required>
+                <label for="csvFile" class="file-label">Choose excel File</label>
                 <div class="selected-file" id="selectedFile"></div>
             </div>
             <button type="submit" id="submitBtn">Generate Documents</button>
@@ -215,7 +215,7 @@
             const fileInput = document.getElementById('csvFile');
             
             if (!fileInput.files.length) {
-                showStatus('Please select a CSV file', 'error');
+                showStatus('Please select an excel file', 'error');
                 return;
             }
 
